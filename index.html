@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Githru VSCode Extension - 문제점 분석 및 개선 방안</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .toc {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .toc h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .toc ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+        }
+
+        .toc li {
+            padding: 8px 12px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .toc li:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+
+        .toc a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .summary-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .summary-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .summary-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .priority-high {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+
+        .priority-medium {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .priority-low {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+
+        .section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .section h3 {
+            color: #333;
+            font-size: 1.4rem;
+            margin: 25px 0 15px 0;
+        }
+
+        .section h4 {
+            color: #555;
+            font-size: 1.2rem;
+            margin: 20px 0 10px 0;
+        }
+
+        .problem-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .problem-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .location {
+            background: #e3f2fd;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 10px 0;
+            display: inline-block;
+        }
+
+        .symptom {
+            background: #fff3e0;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #ff9800;
+        }
+
+        .solution {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 3px solid #4caf50;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block pre {
+            margin: 0;
+        }
+
+        .code-block .comment {
+            color: #a0aec0;
+        }
+
+        .code-block .keyword {
+            color: #fbb6ce;
+        }
+
+        .code-block .string {
+            color: #9ae6b4;
+        }
+
+        .code-block .function {
+            color: #90cdf4;
+        }
+
+        .recommendations {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .recommendations h3 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .recommendations ol {
+            padding-left: 20px;
+        }
+
+        .recommendations li {
+            margin: 10px 0;
+            padding: 8px 0;
+        }
+
+        .footer {
+            background: #2d3748;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+
+        .badge-high {
+            background: #f44336;
+            color: white;
+        }
+
+        .badge-medium {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-low {
+            background: #4caf50;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .toc ul {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Githru VSCode Extension</h1>
+            <p>주요 문제점 분석 및 개선 방안 보고서</p>
+        </div>
+
+        <div class="content">
+            <!-- 목차 -->
+            <div class="toc">
+                <h2>📋 목차</h2>
+                <ul>
+                    <li><a href="#summary">1. 문제점 요약</a></li>
+                    <li><a href="#detailed-analysis">2. 상세 문제점 분석</a></li>
+                    <li><a href="#improvements">3. 개선 방안</a></li>
+                    <li><a href="#recommendations">4. 권장 사항</a></li>
+                </ul>
+            </div>
+
+            <!-- 문제점 요약 -->
+            <div class="section" id="summary">
+                <h2>📊 문제점 요약</h2>
+                <p>Githru VSCode Extension에서 발견된 주요 문제점 6가지를 우선순위별로 정리한 표입니다.</p>
+                
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>문제점</th>
+                            <th>상세 위치</th>
+                            <th>증상/설명</th>
+                            <th>우선순위</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="priority-high">
+                            <td>GitHub 인증/토큰 문제</td>
+                            <td><code>packages/vscode/src/extension.ts</code></td>
+                            <td>인증 실패, 안내 부족</td>
+                            <td><span class="badge badge-high">높음</span></td>
+                        </tr>
+                        <tr class="priority-low">
+                            <td>StrictMode 비활성화</td>
+                            <td><code>packages/view/src/index.common.tsx</code></td>
+                            <td>잠재적 버그 미탐지</td>
+                            <td><span class="badge badge-low">낮음</span></td>
+                        </tr>
+                        <tr class="priority-high">
+                            <td>Git 환경 문제</td>
+                            <td><code>packages/vscode/src/utils/git.util.ts</code></td>
+                            <td>실행 불가, 에러 발생</td>
+                            <td><span class="badge badge-high">높음</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 상세 문제점 분석 -->
+            <div class="section" id="detailed-analysis">
+                <h2>🔍 상세 문제점 분석</h2>
+
+                <div class="problem-card">
+                    <h4>1. GitHub 인증/토큰 문제</h4>
+                    <div class="location">위치: <code>packages/vscode/src/extension.ts</code> (<code>activate</code> 함수)</div>
+                    <div class="symptom">
+                        <strong>증상:</strong> 인증이 안 되거나, 토큰이 없을 때 익스텐션이 정상 동작하지 않음. 안내 부족.
+                    </div>
+                </div>
+
+                <div class="problem-card">
+                    <h4>2. StrictMode 비활성화로 인한 잠재적 버그 미탐지</h4>
+                    <div class="location">위치: <code>packages/view/src/index.common.tsx</code></div>
+                    <div class="symptom">
+                        <strong>증상:</strong> React StrictMode가 꺼져 있어 잠재적 버그/비동기 문제를 미리 발견하지 못함.
+                    </div>
+                </div>
+
+                <div class="problem-card">
+                    <h4>3. Git 실행 환경 문제</h4>
+                    <div class="location">위치: <code>packages/vscode/src/utils/git.util.ts</code> (<code>findGitOnWin32</code>, <code>getRepo</code> 등)</div>
+                    <div class="symptom">
+                        <strong>증상:</strong> Git 미설치, 경로 문제 등으로 익스텐션이 동작하지 않음. 에러 발생.
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 개선 방안 -->
+            <div class="section" id="improvements">
+                <h2>🛠️ 개선 방안</h2>
+
+                <h3>1. GitHub 인증/토큰 문제 해결</h3>
+                <div class="solution">
+                    <h4>개선 방안:</h4>
+                    <ul>
+                        <li>토큰이 없을 때 사용자에게 인증 방법을 안내하는 메시지와 함께, 인증 버튼(명령어 실행) 제공</li>
+                        <li>인증 실패 시 재시도 로직 및 안내 강화</li>
+                    </ul>
+                </div>
+
+                <div class="code-block">
+                    <pre><span class="keyword">const</span> githubToken: <span class="keyword">string</span> | <span class="keyword">undefined</span> = <span class="keyword">await</span> getGithubToken(secrets);
+<span class="keyword">if</span> (!githubToken) {
+  vscode.window.showErrorMessage(
+    <span class="string">"GitHub 인증이 필요합니다. [여기서 로그인]을 클릭하세요."</span>,
+    <span class="string">"로그인"</span>
+  ).then((selection) => {
+    <span class="keyword">if</span> (selection === <span class="string">"로그인"</span>) {
+      vscode.commands.executeCommand(COMMAND_LOGIN_WITH_GITHUB);
+    }
+  });
+  <span class="keyword">throw new</span> GithubTokenUndefinedError(<span class="string">"GitHub 토큰이 없습니다. 인증을 진행해 주세요."</span>);
+}</pre>
+</div>
+
+                <h3>2. React StrictMode 활성화</h3>
+                <div class="solution">
+                    <h4>개선 방안:</h4>
+                    <ul>
+                        <li>React StrictMode를 활성화하여 개발 단계에서 잠재적 문제를 조기에 발견</li>
+                        <li>성능 이슈가 있다면, 일시적으로만 비활성화하고 반드시 다시 활성화</li>
+                    </ul>
+                </div>
+
+                <div class="code-block">
+                    <pre><span class="keyword">import</span> React <span class="keyword">from</span> <span class="string">"react"</span>;
+<span class="keyword">import</span> ReactDOM <span class="keyword">from</span> <span class="string">"react-dom/client"</span>;
+<span class="keyword">import</span> App <span class="keyword">from</span> <span class="string">"./App"</span>;
+
+<span class="keyword">export const</span> initRender = () => {
+  <span class="keyword">const</span> rootContainer = document.getElementById(<span class="string">"root"</span>) <span class="keyword">as</span> HTMLElement;
+  ReactDOM.createRoot(rootContainer).render(
+    &lt;React.StrictMode&gt;
+      &lt;App /&gt;
+    &lt;/React.StrictMode&gt;
+  );
+};
+<span class="comment">// 주석: StrictMode를 활성화하면 useEffect 등에서 의도치 않은 두 번 호출이 있을 수 있으나, 
+// 이는 개발 단계에서 버그를 조기에 발견하기 위함입니다.</span></pre>
+                </div>
+
+                <h3>3. Git 실행 환경 문제 해결</h3>
+                <div class="solution">
+                    <h4>개선 방안:</h4>
+                    <ul>
+                        <li>Git 실행 파일을 찾지 못했을 때 사용자에게 명확한 안내 메시지 제공</li>
+                        <li>Git 미설치 시 설치 안내 링크 제공</li>
+                    </ul>
+                </div>
+
+                <div class="code-block">
+                    <pre><span class="keyword">function</span> findGitOnWin32() {
+  <span class="keyword">return</span> (
+    findSystemGitWin32(process.env[<span class="string">"ProgramW6432"</span>])
+      .then(undefined, () => findSystemGitWin32(process.env[<span class="string">"ProgramFiles(x86)"</span>]))
+      .then(undefined, () => findSystemGitWin32(process.env[<span class="string">"ProgramFiles"</span>]))
+      .then(undefined, () =>
+        findSystemGitWin32(
+          process.env[<span class="string">"LocalAppData"</span>] ? path.join(process.env[<span class="string">"LocalAppData"</span>]!, <span class="string">"Programs"</span>) : undefined
+        )
+      )
+      .then(undefined, () => findGitWin32InPath())
+      .catch(() => {
+        vscode.window.showErrorMessage(
+          <span class="string">"Git이 설치되어 있지 않거나 경로를 찾을 수 없습니다. [Git 설치하기](https://git-scm.com/download/win)"</span>
+        );
+        <span class="keyword">throw new</span> Error(<span class="string">"Git 실행 파일을 찾을 수 없습니다."</span>);
+      })
+  );
+}</pre>
+                </div>
+
+            </div>
+
+            <!-- 권장 사항 -->
+            <div class="recommendations" id="recommendations">
+                <h3>📋 개선/점검 권장 사항</h3>
+                <ol>
+                    <li><strong>초기 데이터 로딩/동기화 로직 점검</strong> - fallback UI 및 재시도 로직 구현</li>
+                    <li><strong>React StrictMode 활성화</strong> - 개발 단계에서 잠재적 버그 조기 발견</li>
+                    <li><strong>Git 환경 검증 및 안내 강화</strong> - 설치 안내 및 경로 문제 해결</li>
+                </ol>
+            </div>
+
+            <div class="section">
+                <h3>🎯 우선순위별 개선 계획</h3>
+                <div class="problem-card">
+                    <h4>🔴 높은 우선순위 (즉시 해결 필요)</h4>
+                    <ul>
+                        <li>GitHub 인증/토큰 문제</li>
+                        <li>Git 환경 문제</li>
+                    </ul>
+                </div>
+                
+                <div class="problem-card">
+                    <h4>🟢 낮은 우선순위 (장기 개선 계획)</h4>
+                    <ul>
+                        <li>StrictMode 비활성화</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 Githru VSCode Extension - 주요 문제점 분석 및 개선 방안 보고서</p>
+            <p>작성자 - 김은정</p>
+            <p>각 개선 방안은 실제 코드에 적용 시, 프로젝트의 전체적인 동작 흐름과 사용자 경험을 고려하여 추가적인 예외 처리 및 UI/UX 개선이 필요할 수 있습니다.</p>
+        </div>
+    </div>
+</body>
+</html> 
